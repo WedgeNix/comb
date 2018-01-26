@@ -52,6 +52,9 @@ func main() {
 		case AddInput:
 			addinput(&allgoals, &allpools)
 		case CalcComb:
+			if len(ctrlx) == 0 {
+				ctrlx = append(ctrlx, []int{1, 1}...)
+			}
 			if err := params(2, ctrlx, 1, len(allgoals), 1, len(allpools)); err != nil {
 				print(err)
 				break
@@ -143,10 +146,8 @@ func atofs(s string) []floatprec {
 func rng(f [][]floatprec) string {
 	L := len(f)
 	switch L {
-	case 0:
+	case 0, 1:
 		return ""
-	case 1:
-		return "  1"
 	default:
 		return "  1-" + itoa(L)
 	}
