@@ -24,7 +24,7 @@ const (
 var (
 	intexp  = regexp.MustCompile(`[-+]?\d+(,\d+)*`)
 	numexp  = regexp.MustCompile(`[+-]?\d+(?:,\d+)*(?:[.]\d+)?`)
-	goalexp = regexp.MustCompile(`(?i)\b(goal|aim|fin|final|finish|sum|end|stop|val|value|get|grab|num|number|last|here|this|add|to|towards|there)\b`)
+	goalexp = regexp.MustCompile(`(?i)\b(go|goal|aim|fin|final|finish|sum|end|stop|val|value|get|grab|num|number|last|here|this|add|to|towards|there)\b`)
 	fileexp = regexp.MustCompile(`"[^"]+"`)
 
 	rdr = bufio.NewReader(os.Stdin)
@@ -34,12 +34,14 @@ var (
 	atoi       = strconv.Atoi
 	repeat     = strings.Repeat
 	parsefloat = strconv.ParseFloat
+	fmtf       = strconv.FormatFloat
+	idx        = strings.Index
 )
 
 func main() {
 	var (
 		allgoals,
-		allpools [][]float64
+		allpools [][]floatprec
 		ctrlx []int
 	)
 
@@ -56,7 +58,7 @@ func main() {
 			}
 			gi, pi := ctrlx[0]-1, ctrlx[1]-1
 			for _, goal := range allgoals[gi] {
-				print("goal " + ftoa(goal) + "  " + sprint(lib.Find(goal, allpools[pi])))
+				print("goal " + goal.String() + "  " + sprint(lib.Find(goal.float64, fptof(allpools[pi]), goal.int)))
 			}
 		}
 
@@ -110,17 +112,35 @@ func atois(s string) []int {
 	}
 	return ints
 }
-func atofs(s string) []float64 {
-	var nums []float64
-	for _, numstr := range numexp.FindAllString(s, -1) {
-		if n, err := parsefloat(numstr, 64); err == nil {
-			nums = append(nums, n)
-		}
-	}
-	return nums
+
+type floatprec struct {
+	float64
+	int
 }
 
-func rng(f [][]float64) string {
+func fptof(fp []floatprec) []float64 {
+	f := make([]float64, len(fp))
+	for FPi, FP := range fp {
+		f[FPi] = FP.float64
+	}
+	return f
+}
+
+func (fp floatprec) String() string {
+	return fmtf(fp.float64, 'f', fp.int, 64)
+}
+
+func atofs(s string) []floatprec {
+	var sl []floatprec
+	for _, s := range numexp.FindAllString(s, -1) {
+		if f, err := parsefloat(s, 64); err == nil {
+			sl = append(sl, floatprec{f, len(s) - (idx(s, ".") + 1)})
+		}
+	}
+	return sl
+}
+
+func rng(f [][]floatprec) string {
 	L := len(f)
 	switch L {
 	case 0:
@@ -128,7 +148,7 @@ func rng(f [][]float64) string {
 	case 1:
 		return "  1"
 	default:
-		return "  1-" + strconv.Itoa(L)
+		return "  1-" + itoa(L)
 	}
 }
 
@@ -141,14 +161,14 @@ func choose() (Choice, string) {
 	return -1, s
 }
 
-func addinput(ag, ap *[][]float64) {
+func addinput(ag, ap *[][]floatprec) {
 	var (
 		allgoals,
 		allpools,
 		allgoalsf,
-		allpoolsf [][]float64
+		allpoolsf [][]floatprec
 		poolbuf,
-		poolbuff []float64
+		poolbuff []floatprec
 	)
 
 	print(
@@ -206,7 +226,7 @@ func println(lns ...interface{}) {
 	fmt.Println(buf)
 }
 
-func flushpool(ap *[][]float64, pb *[]float64) {
+func flushpool(ap *[][]floatprec, pb *[]floatprec) {
 	allpools := *ap
 	poolbuf := *pb
 	if len(poolbuf) > 0 {
@@ -217,17 +237,17 @@ func flushpool(ap *[][]float64, pb *[]float64) {
 	*pb = poolbuf
 }
 
-func scan(in string, ag, ap *[][]float64, pb *[]float64) {
+func scan(in string, ag, ap *[][]floatprec, pb *[]floatprec) {
 	allgoals := *ag
 	allpools := *ap
 	poolbuf := *pb
-	nums := atofs(in)
-	if len(nums) > 0 {
+	fps := atofs(in)
+	if len(fps) > 0 {
 		if goalexp.MatchString(in) {
-			allgoals = append(allgoals, nums)
+			allgoals = append(allgoals, fps)
 			flushpool(&allpools, &poolbuf)
 		} else {
-			poolbuf = append(poolbuf, nums...)
+			poolbuf = append(poolbuf, fps...)
 		}
 	}
 	*ag = allgoals
